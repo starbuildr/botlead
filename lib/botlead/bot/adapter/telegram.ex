@@ -121,16 +121,16 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @doc """
   Create Nadia client option specification for message response.
   """
-  @spec msg_to_opts(%Botlead.Message{}, Keyword.t) :: Keyword.t
-  def msg_to_opts(%Botlead.Message{} = msg, opts \\ []) do
-    Enum.reduce(msg, opts, fn({key, value}, opts) ->
+  @spec msg_to_opts(%Botlead.Message{}, map()) :: map()
+  def msg_to_opts(%Botlead.Message{} = msg, msg_opts \\ %{}) do
+    Enum.reduce(Map.from_struct(msg), msg_opts, fn({key, value}, msg_opts) ->
       case key do
         :parse_mode ->
-          Map.put(opts, :parse_mode, value)
+          Map.put(msg_opts, :parse_mode, value)
         :inline_keyboard ->
-          Map.put(opts, :reply_markup, [inline_keyboard: value])
+          Map.put(msg_opts, :reply_markup, [inline_keyboard: value])
         _ ->
-          opts
+          msg_opts
       end
     end)
   end

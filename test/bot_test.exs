@@ -19,6 +19,18 @@ defmodule Botlead.BotTest do
       assert_receive {:message_delivered, :sent, :ok}
     end
 
+    test "send message as structure" do
+      message = build(:telegram_message)
+      chat_id = message.message.chat.id
+      text = message.message.chat.text
+      msg = %Botlead.Message{
+        content: text
+      }
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
+      Botlead.TestBot.send_message(chat_id, msg)
+      assert_receive {:message_delivered, :sent, :ok}
+    end
+
     test "edit message" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id

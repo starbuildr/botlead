@@ -58,6 +58,7 @@ defmodule Botlead.Bot.Server do
   defmacro __using__(_opts) do
     quote do
       use GenServer
+      alias Botlead.Message
       require Logger
 
       @behaviour Botlead.Bot.Behaviour
@@ -223,6 +224,11 @@ defmodule Botlead.Bot.Server do
       @doc """
       Send the new message by Bot.
       """
+      @spec send_message(String.t, %Message{}) :: :ok
+      def send_message(telegram_chat_id, %Message{content: text} = message) do
+        opts = adapter_module().msg_to_opts(message)
+        send_message(telegram_chat_id, text, opts)
+      end
       @spec send_message(String.t, String.t, Keyword.t) :: :ok
       def send_message(telegram_chat_id, text, opts \\ []) do
         message = {:send_message, telegram_chat_id, text, opts}
