@@ -5,6 +5,7 @@ defmodule Botlead.Client.Behaviour do
 
   @type state :: map()
   @type message :: map()
+  @type delivery_action :: :sent | :edited | :deleted
 
   @doc """
   Module for message routing.
@@ -30,5 +31,5 @@ defmodule Botlead.Client.Behaviour do
   @doc """
   Callback for handling message delivery, replaces the current state.
   """
-  @callback message_delivered(message, state) :: state
+  @callback message_delivered(delivery_action, message, state) :: state
 end

@@ -1,6 +1,6 @@
 # Botlead
 
-[https://hexdocs.pm/botlead](HexDocs)
+[HexDocs](https://hexdocs.pm/botlead)
 
 The main motivation for creating this library was lack of easy to use tools to define
 sessions for chat bots. The use of sessions allows us to add aditional authorization
@@ -14,7 +14,7 @@ messages and redirect the relevant ones to the end clients.
 
 `Client` - is a process to store the client session which recieves messages send by bot
 and do the proper routing, by the rules defined in router specification. We use 
-[https://hexdocs.pm/genrouter](GenRouter) as our default routing library.
+[GenRouter](https://hexdocs.pm/gen_router) as our default routing library.
 
 ## Installation
 
@@ -153,9 +153,9 @@ Required keys: `chat_id`, `conn`, `path`, `scope`.
 
 Convert bot message into connection object, use your router here. Return conn object.
 
-#### message_delivered(message, state)
+#### message_delivered(action, message, state)
 
-Callback for message deliverance confirmation, return state.
+Callback for message deliverance confirmation, returns state.
 
 #### callback(state, callback_msg)
 
@@ -166,7 +166,7 @@ It's possible to subscribe to result of specific operations performed by bot wit
 Current callback messages:
 
   * `{:parsed_message, conn}` - client message from bot was convered to conn object;
-  * `{:message_delivered_callback, message}` - message was delivered to the chat platform;
+  * `{:message_delivered, action, message}` - message update was delivered to the chat platform;
   * `{:client_terminated, reason}` - client session process crashed;
   * `{:client_started, chat_id, opts}` - client session process was started.
 
@@ -207,7 +207,7 @@ defmodule App.Client do
   end
 
   @impl true
-  def message_delivered(_message, state) do
+  def message_delivered(_action, _message, state) do
     state
   end
 
@@ -228,7 +228,7 @@ end
 
 ### Router
 
-Check [https://hexdocs.pm/genrouter](GenRouter) docs of how to define your router and related modules.
+Check [GenRouter](https://hexdocs.pm/gen_router) docs of how to define your router and related modules.
 
 ## Other
 

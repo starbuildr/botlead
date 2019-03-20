@@ -9,6 +9,37 @@ defmodule Botlead.BotTest do
     :ok
   end
 
+  describe "bot API" do
+    test "send message" do
+      message = build(:telegram_message)
+      chat_id = message.message.chat.id
+      text = message.message.chat.text
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
+      Botlead.TestBot.send_message(chat_id, text)
+      assert_receive {:message_delivered, :sent, :ok}
+    end
+
+    test "edit message" do
+      message = build(:telegram_message)
+      chat_id = message.message.chat.id
+      text = message.message.chat.text
+      update_id = message.update_id
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
+      Botlead.TestBot.edit_message(chat_id, message.update_id, text)
+      assert_receive {:message_delivered, :edited, ^update_id}
+    end
+
+    test "delete message" do
+      message = build(:telegram_message)
+      chat_id = message.message.chat.id
+      text = message.message.chat.text
+      update_id = message.update_id
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
+      Botlead.TestBot.delete_message(chat_id, update_id, text)
+      assert_receive {:message_delivered, :deleted, ^update_id}
+    end
+  end
+
   describe "bot server" do
     test "is alive" do
       pid = Process.whereis(Botlead.TestBot)
@@ -27,7 +58,7 @@ defmodule Botlead.BotTest do
     test "client can be restarted, new process will be spawned" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      {:ok, pid} = Botlead.Client.connect(Botlead.TestClient, Botlead.TestBot, chat_id, listener: self())
+      {:ok, pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       assert_receive {:client_started, ^chat_id, _opts}
 
       Process.send(Botlead.TestBot, {:restart_client, chat_id, listener: self()}, [])
@@ -39,7 +70,7 @@ defmodule Botlead.BotTest do
     test "attach client process in case it was started" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      {:ok, _pid} = Botlead.Client.connect(Botlead.TestClient, Botlead.TestBot, chat_id)
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id)
       Process.send(Botlead.TestBot, {:get_clients, self()}, [])
       assert_receive {:get_clients, clients}
       client_pid = Map.get(clients, chat_id)
@@ -49,8 +80,8 @@ defmodule Botlead.BotTest do
     test "deattach client process in case it was stopped" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      {:ok, _pid} = Botlead.Client.connect(Botlead.TestClient, Botlead.TestBot, chat_id)
-      Botlead.Client.disconnect(Botlead.TestClient, Botlead.TestBot, chat_id)
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id)
+      Botlead.TestClient.disconnect(Botlead.TestBot, chat_id)
       Process.send(Botlead.TestBot, {:get_clients, self()}, [])
       assert_receive {:get_clients, clients}
       client_pid = Map.get(clients, chat_id)
@@ -60,7 +91,7 @@ defmodule Botlead.BotTest do
     test "automatically re-attach client process after it's unexpected restart" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      {:ok, pid} = Botlead.Client.connect(Botlead.TestClient, Botlead.TestBot, chat_id)
+      {:ok, pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id)
       Process.exit(pid, :kill)
       :timer.sleep(10)
       Process.send(Botlead.TestBot, {:get_clients, self()}, [])

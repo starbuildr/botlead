@@ -36,16 +36,11 @@ defmodule Botlead.Bot.Adapter.Telegram do
       false <- config(:sendbox_message_send, false),
       {:ok, result} <- Nadia.send_message(chat_id, text, opts)
     do
-      case client_pid do
-        nil ->
-          :ok
-        pid ->
-          GenServer.cast(pid, {:message_delivered, result})
-      end
+      maybe_notify_msg_result(client_pid, {:sent, result})
     else
       true ->
         Logger.info fn -> "No chat messages send in a sandbox mode!" end
-        :ok
+        maybe_notify_msg_result(client_pid, {:sent, :ok})
       {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
         Logger.warn fn -> "Telegram bot message retry send_message!" end
         :timer.sleep(@retry_delay)
@@ -56,30 +51,40 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @doc """
   Edit existing message by it's id.
   """
-  @spec edit_message(String.t, String.t, String.t, Keyword.t) :: :ok
-  def edit_message(chat_id, message_id, text, opts) do
-    case Nadia.edit_message_text(chat_id, message_id, nil, text, opts) do
-      {:ok, _result} ->
-        :ok
-      {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
-        Logger.warn fn -> "Telegram bot message retry edit_message!" end
-        :timer.sleep(@retry_delay)
-        edit_message(chat_id, message_id, text, opts)
+  @spec edit_message(String.t, String.t, String.t, pid() | nil, Keyword.t) :: :ok
+  def edit_message(chat_id, message_id, text, client_pid, opts) do
+    unless config(:sendbox_message_send, false) do
+      case Nadia.edit_message_text(chat_id, message_id, nil, text, opts) do
+        {:ok, result} ->
+          maybe_notify_msg_result(client_pid, {:edited, result})
+        {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
+          Logger.warn fn -> "Telegram bot message retry edit_message!" end
+          :timer.sleep(@retry_delay)
+          edit_message(chat_id, message_id, text, client_pid, opts)
+      end
+    else
+      Logger.info fn -> "No chat messages are edited in a sandbox mode!" end
+      maybe_notify_msg_result(client_pid, {:edited, message_id})
     end
   end
 
   @doc """
   Delete existing message by it's id.
   """
-  @spec delete_message(String.t, String.t, Keyword.t) :: :ok
-  def delete_message(chat_id, message_id, opts) do
-    case Nadia.API.request("deleteMessage", [chat_id: chat_id, message_id: message_id]) do
-      :ok ->
-        :ok
-      {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
-        Logger.warn fn() -> "Telegram bot message retry delete_message!" end
-        :timer.sleep(@retry_delay)
-        delete_message(chat_id, message_id, opts)
+  @spec delete_message(String.t, String.t, pid() | nil, Keyword.t) :: :ok
+  def delete_message(chat_id, message_id, client_pid, opts) do
+    unless config(:sendbox_message_send, false) do
+      case Nadia.API.request("deleteMessage", [chat_id: chat_id, message_id: message_id]) do
+        :ok ->
+          maybe_notify_msg_result(client_pid, {:deleted, message_id})
+        {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
+          Logger.warn fn() -> "Telegram bot message retry delete_message!" end
+          :timer.sleep(@retry_delay)
+          delete_message(chat_id, message_id, client_pid, opts)
+      end
+    else
+      Logger.info fn -> "No chat messages are deleted in a sandbox mode!" end
+      maybe_notify_msg_result(client_pid, {:deleted, message_id})
     end
   end
 
@@ -111,6 +116,23 @@ defmodule Botlead.Bot.Adapter.Telegram do
       |> Enum.unzip()
     last_update = Enum.max(new_updates)
     {:ok, new_updates, last_update, cmds}
+  end
+
+  @doc """
+  Create Nadia client option specification for message response.
+  """
+  @spec msg_to_opts(%Botlead.Message{}, Keyword.t) :: Keyword.t
+  def msg_to_opts(%Botlead.Message{} = msg, opts \\ []) do
+    Enum.reduce(msg, opts, fn({key, value}, opts) ->
+      case key do
+        :parse_mode ->
+          Map.put(opts, :parse_mode, value)
+        :inline_keyboard ->
+          Map.put(opts, :reply_markup, [inline_keyboard: value])
+        _ ->
+          opts
+      end
+    end)
   end
 
   @doc """
@@ -151,4 +173,10 @@ defmodule Botlead.Bot.Adapter.Telegram do
     Logger.warn fn -> "Invalid message: #{inspect(message)}" end
     {0, :invalid_message}
   end
+
+  @spec maybe_notify_msg_result(pid() | nil, {Botlead.Client.Behaviour.delivery_action, any()}) :: :ok
+  defp maybe_notify_msg_result(pid, {action, result}) when is_pid(pid) do
+    GenServer.cast(pid, {:message_delivery_result, action, result})
+  end
+  defp maybe_notify_msg_result(_, _), do: :ok
 end

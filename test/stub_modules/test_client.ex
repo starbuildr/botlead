@@ -32,7 +32,7 @@ defmodule Botlead.TestClient do
   end
 
   @impl true
-  def message_delivered(_message, state) do
+  def message_delivered(_action, _message, state) do
     state
   end
 

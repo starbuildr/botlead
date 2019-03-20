@@ -13,7 +13,7 @@ defmodule Botlead.ClientTest do
     test "recieves the relayed messages from bot" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      {:ok, _pid} = Botlead.Client.connect(Botlead.TestClient, Botlead.TestBot, chat_id, listener: self())
+      {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       Process.send(Botlead.TestBot, {:process_updates, [message]}, [])
       assert_receive {:parsed_message, %GenRouter.Conn{} = conn}
       assert conn.params.message === message
@@ -22,10 +22,10 @@ defmodule Botlead.ClientTest do
     test "automatically starts new process on a new message if needed" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      refute Botlead.Client.is_client_started?(Botlead.TestClient, chat_id)
+      refute Botlead.TestClient.is_client_started?(chat_id)
       Process.send(Botlead.TestBot, {:process_updates, [message]}, [])
       assert_receive {:attached_client, ^chat_id, pid}
-      assert Botlead.Client.is_client_started?(Botlead.TestClient, chat_id)
+      assert Botlead.TestClient.is_client_started?(chat_id)
       conn = GenServer.call(pid, {:get_last_conn})
       assert conn.params.message === message
     end

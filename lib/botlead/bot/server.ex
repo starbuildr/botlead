@@ -11,21 +11,21 @@ defmodule Botlead.Bot.Server do
   def relay_msg_to_client(chat_id, message, clients, client_module, bot_server, is_registered?, process_message_from_the_new_user) do
     case Map.get(clients, chat_id) do
       pid when is_pid(pid) ->
-        Botlead.Client.parse_message(pid, message)
+        client_module.parse_message(pid, message)
         :ok
       _ ->
         with \
           true <- is_registered?.(chat_id),
-          {false, _} <- {Botlead.Client.is_client_started?(client_module, chat_id), chat_id},
-          {:ok, pid} <- Botlead.Client.connect(client_module, bot_server, chat_id)
+          {false, _} <- {client_module.is_client_started?(chat_id), chat_id},
+          {:ok, pid} <- client_module.connect(bot_server, chat_id)
         do
           Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
-          Botlead.Client.parse_message(pid, message)
+          client_module.parse_message(pid, message)
         else
           false ->
             with \
               {:ok, _} <- process_message_from_the_new_user.(chat_id, message),
-              {:ok, pid} <- Botlead.Client.connect(client_module, bot_server, chat_id)
+              {:ok, pid} <- client_module.connect(bot_server, chat_id)
             do
               if Process.whereis(__MODULE__) do
                 Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
@@ -34,7 +34,7 @@ defmodule Botlead.Bot.Server do
                   Logger.error fn -> "Bot server is dead and can't attach client" end
                 end
               end
-              Botlead.Client.parse_message(pid, message)
+              client_module.parse_message(pid, message)
             else
               {:error, changeset} ->
                 Logger.error fn -> "Unable to register the new client: #{inspect(changeset)}" end
@@ -42,9 +42,9 @@ defmodule Botlead.Bot.Server do
                 Logger.error fn -> "Unable to connect the new client: #{inspect(error)}" end
             end
           {true, chat_id} ->
-            pid = Botlead.Client.get_client_pid(client_module, chat_id)
+            pid = client_module.get_client_pid(chat_id)
             Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
-            Botlead.Client.parse_message(pid, message)
+            client_module.parse_message(pid, message)
           _ ->
             Logger.error fn -> "Unable to start client #{inspect(chat_id)} and relay: #{inspect(message)}" end
         end
@@ -104,16 +104,18 @@ defmodule Botlead.Bot.Server do
       @doc """
       Edit previously posted message.
       """
-      def handle_cast({:edit_message, chat_id, message_id, text, opts}, state) do
-        adapter_module().edit_message(chat_id, message_id, text, opts)
+      def handle_cast({:edit_message, chat_id, message_id, text, opts}, %{clients: clients} = state) do
+        client_pid = Map.get(clients, chat_id)
+        adapter_module().edit_message(chat_id, message_id, text, client_pid, opts)
         {:noreply, state}
       end
 
       @doc """
       Delete previously posted message.
       """
-      def handle_cast({:delete_message, chat_id, message_id, opts}, state) do
-        adapter_module().delete_message(chat_id, message_id, opts)
+      def handle_cast({:delete_message, chat_id, message_id, opts}, %{clients: clients} = state) do
+        client_pid = Map.get(clients, chat_id)
+        adapter_module().delete_message(chat_id, message_id, client_pid, opts)
         {:noreply, state}
       end
 
@@ -194,8 +196,8 @@ defmodule Botlead.Bot.Server do
       Restart client session
       """
       def handle_info({:restart_client, chat_id, opts}, state) when is_integer(chat_id) or is_binary(chat_id) do
-        :ok = Botlead.Client.disconnect(client_module(), self(), chat_id)
-        {:ok, new_pid} = Botlead.Client.connect(client_module(), self(), chat_id, opts)
+        :ok = client_module().disconnect(self(), chat_id)
+        {:ok, new_pid} = client_module().connect(self(), chat_id, opts)
         execute_callback(state, {:restarted_client, chat_id, new_pid})
         {:noreply, state}
       end
@@ -216,6 +218,33 @@ defmodule Botlead.Bot.Server do
       when is_integer(chat_id) or is_binary(chat_id) do
         execute_callback(state, {:detached_client, chat_id})
         {:noreply, %{state | clients: Map.drop(clients, [chat_id])}}
+      end
+
+      @doc """
+      Send the new message by Bot.
+      """
+      @spec send_message(String.t, String.t, Keyword.t) :: :ok
+      def send_message(telegram_chat_id, text, opts \\ []) do
+        message = {:send_message, telegram_chat_id, text, opts}
+        GenServer.cast(__MODULE__, message)
+      end
+
+      @doc """
+      Edit existing message by Bot.
+      """
+      @spec edit_message(String.t, String.t, String.t, Keyword.t) :: :ok
+      def edit_message(telegram_chat_id, message_id, text, opts \\ []) do
+        message = {:edit_message, telegram_chat_id, message_id, text, opts}
+        GenServer.cast(__MODULE__, message)
+      end
+
+      @doc """
+      Delete existing message by Bot.
+      """
+      @spec delete_message(String.t, String.t, Keyword.t) :: :ok
+      def delete_message(telegram_chat_id, message_id, opts \\ []) do
+        message = {:delete_message, telegram_chat_id, message_id, opts}
+        GenServer.cast(__MODULE__, message)
       end
 
       @doc """
