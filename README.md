@@ -30,17 +30,45 @@ end
 
 ## Configuration
 
+Add `supervisor(Botlead.Supervisor, [])` to supervisor tree.
+
+Add your bot into `:botlead` configuration:
+
+```
+config :botlead, Botlead.Supervisor,
+  bots: [
+    MyApp.Bot
+  ]
+```
+
 ### Botlead.Bot.Adapter.Telegram
 
+* `use_webhook` - add URL for your webserver to get Telegram updates as postbacks instead of polling;
 * `poll_delay` - millisecond delay for polling updates from Telegram;
 * `poll_limit` - maximum amount of update records which will be queried in one request;
 * `sendbox_message_send` - use sendbox mode if no actual messages should be send (useful for testing).
 
+```
+config :botlead, Botlead.Bot.Adapter.Telegram,
+  poll_delay: 600,
+  poll_limit: 100
+```
+
+Or 
+
+```
+config :botlead, Botlead.Bot.Adapter.Telegram,
+  use_webhook: "https://mysite.com/TELEGRAM_SECURE_URL"
+```
+
 ### Nadia
 
 We use Nadia as adapter library for communication with Telegram platform. 
-We support `TELEGRAM_BOT_TOKEN` environtment variable which will be fetched at runtime,
-feel free to override with static token: `config :nadia, token: "*****"`
+
+```
+config :nadia,
+  token: {:system, "TELEGRAM_BOT_TOKEN"}
+```
 
 ## Usage
 

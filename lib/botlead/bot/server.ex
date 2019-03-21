@@ -19,7 +19,7 @@ defmodule Botlead.Bot.Server do
           {false, _} <- {client_module.is_client_started?(chat_id), chat_id},
           {:ok, pid} <- client_module.connect(bot_server, chat_id)
         do
-          Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
+          Process.send(bot_server, {:attach_client, chat_id, pid}, [])
           client_module.parse_message(pid, message)
         else
           false ->
@@ -27,8 +27,8 @@ defmodule Botlead.Bot.Server do
               {:ok, _} <- process_message_from_the_new_user.(chat_id, message),
               {:ok, pid} <- client_module.connect(bot_server, chat_id)
             do
-              if Process.whereis(__MODULE__) do
-                Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
+              if Process.whereis(bot_server) do
+                Process.send(bot_server, {:attach_client, chat_id, pid}, [])
               else
                 if System.get_env("MIX_ENV") !== "test" do
                   Logger.error fn -> "Bot server is dead and can't attach client" end
@@ -43,7 +43,7 @@ defmodule Botlead.Bot.Server do
             end
           {true, chat_id} ->
             pid = client_module.get_client_pid(chat_id)
-            Process.send(__MODULE__, {:attach_client, chat_id, pid}, [])
+            Process.send(bot_server, {:attach_client, chat_id, pid}, [])
             client_module.parse_message(pid, message)
           _ ->
             Logger.error fn -> "Unable to start client #{inspect(chat_id)} and relay: #{inspect(message)}" end
@@ -174,7 +174,7 @@ defmodule Botlead.Bot.Server do
       """
       def handle_info({:process_updates, messages}, %{processed_messages: old_messages} = state) do
         {:ok, new_updates, last_update, cmds} = adapter_module().process_messages(messages, old_messages)
-        if length(new_updates) > 0 do
+        if length(new_updates) > 0 and last_update != nil do
           Enum.each cmds, fn(cmd) ->
             case cmd do
               {:relay_msg_to_client, chat_id, message} = cmd ->

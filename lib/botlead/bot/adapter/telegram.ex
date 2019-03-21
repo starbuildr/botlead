@@ -114,7 +114,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
       |> Enum.filter(&(&1.update_id not in old_message_ids))
       |> Enum.map(&parse_message/1)
       |> Enum.unzip()
-    last_update = Enum.max(new_updates)
+    last_update = Enum.max(new_updates, fn -> nil end)
     {:ok, new_updates, last_update, cmds}
   end
 
