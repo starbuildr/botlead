@@ -70,6 +70,15 @@ config :nadia,
   token: {:system, "TELEGRAM_BOT_TOKEN"}
 ```
 
+### GenRouter
+
+Add default routing module.
+
+```
+config :gen_router, GenRouter.Conn,
+  default_router: MyApp.Router
+```
+
 ## Usage
 
 Define your own `Bot`, `Client` and `Router`, plus the related controllers to process
