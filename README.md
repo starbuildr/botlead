@@ -260,4 +260,6 @@ Check [GenRouter](https://hexdocs.pm/gen_router) docs of how to define your rout
 
 ## Other
 
+`/restart` command in chatbot automatically restarts client session process.
+
 **This library is in early beta, use at your own risk. Pull requests / suggestions / issues are welcome.**
