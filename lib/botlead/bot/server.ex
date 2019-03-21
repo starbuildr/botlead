@@ -213,6 +213,12 @@ defmodule Botlead.Bot.Server do
       end
 
       @doc """
+      Hack to fix hackney streaming issue:
+      https://github.com/benoitc/hackney/issues/464
+      """
+      def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
+
+      @doc """
       Detach client from bot
       """
       def handle_info({:detach_client, chat_id}, %{clients: clients} = state)
