@@ -27,7 +27,7 @@ defmodule Botlead.Bot.Server do
               {:ok, _} <- process_message_from_the_new_user.(chat_id, message),
               {:ok, pid} <- client_module.connect(bot_server, chat_id)
             do
-              if Process.whereis(bot_server) do
+              if is_pid(bot_server) or Process.whereis(bot_server) do
                 Process.send(bot_server, {:attach_client, chat_id, pid}, [])
               else
                 if System.get_env("MIX_ENV") !== "test" do
