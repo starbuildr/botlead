@@ -116,7 +116,11 @@ defmodule Botlead.Client.Server do
       @spec disconnect(pid(), String.t) :: :ok | :error
       def disconnect(bot_server, chat_id) do
         pid = get_client_pid(chat_id)
-        Botlead.Client.Supervisor.remove_client(bot_server, pid, chat_id)
+        if pid do
+          Botlead.Client.Supervisor.remove_client(bot_server, pid, chat_id)
+        else
+          :ok
+        end
       end
 
       @doc """

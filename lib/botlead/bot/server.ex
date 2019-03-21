@@ -177,9 +177,9 @@ defmodule Botlead.Bot.Server do
         if length(new_updates) > 0 and last_update != nil do
           Enum.each cmds, fn(cmd) ->
             case cmd do
-              {:relay_msg_to_client, chat_id, message} = cmd ->
+              {:relay_msg_to_client, _chat_id, _message} = cmd ->
                 Process.send(self(), cmd, [])
-              {:restart_client, chat_id} = cmd ->
+              {:restart_client, _chat_id, _opts} = cmd ->
                 Process.send(self(), cmd, [])
               _ ->
                 :ok
