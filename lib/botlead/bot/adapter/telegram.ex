@@ -128,7 +128,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
         :parse_mode ->
           Keyword.put(msg_opts, :parse_mode, value)
         :inline_keyboard ->
-          Keyword.put(msg_opts, :reply_markup, [inline_keyboard: value])
+          Keyword.put(msg_opts, :reply_markup, %{inline_keyboard: value})
         _ ->
           msg_opts
       end
