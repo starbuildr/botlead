@@ -124,10 +124,10 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @spec msg_to_opts(%Botlead.Message{}, Keyword.t) :: Keyword.t
   def msg_to_opts(%Botlead.Message{} = msg, msg_opts \\ []) do
     Enum.reduce(Map.from_struct(msg), msg_opts, fn({key, value}, msg_opts) ->
-      case key do
-        :parse_mode ->
+      case {key, value} do
+        {:parse_mode, value} when value != nil ->
           Keyword.put(msg_opts, :parse_mode, value)
-        :inline_keyboard ->
+        {:inline_keyboard, value} when value != nil ->
           Keyword.put(msg_opts, :reply_markup, %{inline_keyboard: value})
         _ ->
           msg_opts
