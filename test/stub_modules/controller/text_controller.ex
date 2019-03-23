@@ -1,5 +1,5 @@
 defmodule Botlead.Controller.TestController do
-  import GenRouter.Conn
+  use GenRouter.Controller
 
   @spec test1(GenRouter.Conn.t(), any()) :: GenRouter.Conn.t()
   def test1(conn, _opts) do
