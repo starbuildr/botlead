@@ -16,7 +16,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @spec init() :: :ok | {:poll, integer(), integer()}
   def init do
     if config(:use_webhook, false) do
-      webhook = config!(:webhook_url)
+      webhook = config!(:use_webhook)
       Logger.info fn -> "Setting Telegram postback webhook to: #{webhook}" end
       Nadia.set_webhook(url: webhook)
       :ok

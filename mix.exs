@@ -4,7 +4,7 @@ defmodule Botlead.MixProject do
   def project do
     [
       app: :botlead,
-      version: "0.1.9",
+      version: "0.1.10",
       elixir: "~> 1.6",
       description: "Elixir framework for writing and configuring chat bots",
       docs: [extras: ["README.md"]],
