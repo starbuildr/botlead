@@ -84,11 +84,13 @@ defmodule Botlead.Bot.Server do
 
         case adapter_module().init() do
           :ok ->
+            execute_callback(state, {:before_start})
             {:ok, state}
           {:poll, poll_delay, poll_limit} ->
             Logger.info fn -> "Starting polling of Telegram bot updates..." end
             timer = Process.send_after(__MODULE__, {:get_updates}, poll_delay)
             state = Map.merge(state, %{poll_timer: timer, poll_delay: poll_delay, poll_limit: poll_limit})
+            execute_callback(state, {:before_start})
             {:ok, state}
         end
       end

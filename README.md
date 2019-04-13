@@ -116,6 +116,7 @@ It's possible to subscribe to result of specific operations performed by bot wit
 
 Current callback messages:
 
+  * `{:before_start}` - executes just before the bot process is initialized;
   * `{:restarted_client, chat_id, new_pid}` - client session process was restarted;
   * `{:attached_client, chat_id, pid}` - client session process started;
   * `{:detached_client, chat_id}` - client session process stopped;
