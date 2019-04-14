@@ -8,7 +8,15 @@ defmodule Botlead.Bot.Server do
   @doc """
   Relay message to client
   """
-  def relay_msg_to_client(chat_id, message, clients, client_module, bot_server, is_registered?, process_message_from_the_new_user) do
+  def relay_msg_to_client(
+    chat_id,
+    message,
+    clients,
+    client_module,
+    bot_server,
+    is_registered?,
+    process_message_from_the_new_user
+  ) when is_binary(chat_id) do
     case Map.get(clients, chat_id) do
       pid when is_pid(pid) ->
         client_module.parse_message(pid, message)
@@ -159,7 +167,7 @@ defmodule Botlead.Bot.Server do
           apply(__MODULE__, :relay_msg_to_client, [chat_id, message, clients])
         else
           Botlead.Bot.Server.relay_msg_to_client(
-            chat_id,
+            "#{chat_id}",
             message,
             clients,
             client_module(),
@@ -198,7 +206,7 @@ defmodule Botlead.Bot.Server do
       @doc """
       Restart client session
       """
-      def handle_info({:restart_client, chat_id, opts}, state) when is_integer(chat_id) or is_binary(chat_id) do
+      def handle_info({:restart_client, chat_id, opts}, state) when is_binary(chat_id) do
         :ok = client_module().disconnect(self(), chat_id)
         {:ok, new_pid} = client_module().connect(self(), chat_id, opts)
         execute_callback(state, {:restarted_client, chat_id, new_pid})
@@ -209,7 +217,7 @@ defmodule Botlead.Bot.Server do
       Attach client to bot
       """
       def handle_info({:attach_client, chat_id, pid}, %{clients: clients} = state)
-      when is_pid(pid) and (is_integer(chat_id) or is_binary(chat_id)) do
+      when is_pid(pid) and is_binary(chat_id) do
         execute_callback(state, {:attached_client, chat_id, pid})
         {:noreply, %{state | clients: Map.put(clients, chat_id, pid)}}
       end
@@ -223,22 +231,29 @@ defmodule Botlead.Bot.Server do
       @doc """
       Detach client from bot
       """
-      def handle_info({:detach_client, chat_id}, %{clients: clients} = state)
-      when is_integer(chat_id) or is_binary(chat_id) do
+      def handle_info({:detach_client, chat_id}, %{clients: clients} = state) when is_binary(chat_id) do
         execute_callback(state, {:detached_client, chat_id})
         {:noreply, %{state | clients: Map.drop(clients, [chat_id])}}
+      end
+
+      @doc """
+      Restart client process by chat_id.
+      """
+      @spec restart_client(String.t, Keyword.t) :: :ok
+      def restart_client(chat_id, opts \\ []) when is_binary(chat_id) do
+        Process.send(__MODULE__, {:restart_client, chat_id, opts}, [])
       end
 
       @doc """
       Send the new message by Bot.
       """
       @spec send_message(String.t, %Message{}) :: :ok
-      def send_message(telegram_chat_id, %Message{content: text} = message) do
+      def send_message(telegram_chat_id, %Message{content: text} = message) when is_binary(telegram_chat_id) do
         opts = adapter_module().msg_to_opts(message)
         send_message(telegram_chat_id, text, opts)
       end
       @spec send_message(String.t, String.t, Keyword.t) :: :ok
-      def send_message(telegram_chat_id, text, opts \\ []) do
+      def send_message(telegram_chat_id, text, opts \\ []) when is_binary(telegram_chat_id) do
         message = {:send_message, telegram_chat_id, text, opts}
         GenServer.cast(__MODULE__, message)
       end
@@ -247,7 +262,7 @@ defmodule Botlead.Bot.Server do
       Edit existing message by Bot.
       """
       @spec edit_message(String.t, String.t, String.t, Keyword.t) :: :ok
-      def edit_message(telegram_chat_id, message_id, text, opts \\ []) do
+      def edit_message(telegram_chat_id, message_id, text, opts \\ []) when is_binary(telegram_chat_id) do
         message = {:edit_message, telegram_chat_id, message_id, text, opts}
         GenServer.cast(__MODULE__, message)
       end
@@ -256,7 +271,7 @@ defmodule Botlead.Bot.Server do
       Delete existing message by Bot.
       """
       @spec delete_message(String.t, String.t, Keyword.t) :: :ok
-      def delete_message(telegram_chat_id, message_id, opts \\ []) do
+      def delete_message(telegram_chat_id, message_id, opts \\ []) when is_binary(telegram_chat_id) do
         message = {:delete_message, telegram_chat_id, message_id, opts}
         GenServer.cast(__MODULE__, message)
       end

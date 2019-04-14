@@ -14,7 +14,7 @@ defmodule Botlead.Client.Server do
       @behaviour Botlead.Client.Behaviour
 
       @spec start_link(Keyword.t, String.t, Keyword.t) :: {:ok, pid}
-      def start_link(global_opts, chat_id, opts) do
+      def start_link(global_opts, chat_id, opts) when is_binary(chat_id) do
         opts = Keyword.merge(global_opts, opts)
         GenServer.start_link(__MODULE__, %{chat_id: chat_id, opts: opts}, name: instance(chat_id))
       end
@@ -75,7 +75,7 @@ defmodule Botlead.Client.Server do
       Get pid for specific client id.
       """
       @spec get_client_pid(String.t) :: pid | nil
-      def get_client_pid(chat_id) do
+      def get_client_pid(chat_id) when is_binary(chat_id) do
         server = __MODULE__.instance(chat_id)
         Process.whereis(server)
       end
@@ -97,7 +97,7 @@ defmodule Botlead.Client.Server do
       Check if client was started for specific client id.
       """
       @spec is_client_started?(String.t) :: boolean()
-      def is_client_started?(chat_id) do
+      def is_client_started?(chat_id) when is_binary(chat_id) do
         server = get_client_pid(chat_id)
         server != nil and Process.alive?(server)
       end
@@ -106,7 +106,7 @@ defmodule Botlead.Client.Server do
       Start client instance for chat id.
       """
       @spec connect(pid(), String.t, Keyword.t) :: {:ok, pid} | :error
-      def connect(bot_server, chat_id, opts \\ []) do
+      def connect(bot_server, chat_id, opts \\ []) when is_binary(chat_id) do
         Botlead.Client.Supervisor.start_client(__MODULE__, bot_server, chat_id, opts)
       end
 
@@ -114,7 +114,7 @@ defmodule Botlead.Client.Server do
       Remove client instance for chat id.
       """
       @spec disconnect(pid(), String.t) :: :ok | :error
-      def disconnect(bot_server, chat_id) do
+      def disconnect(bot_server, chat_id) when is_binary(chat_id) do
         pid = get_client_pid(chat_id)
         if pid do
           Botlead.Client.Supervisor.remove_client(bot_server, pid, chat_id)

@@ -17,7 +17,7 @@ defmodule Botlead.Client.Supervisor do
   end
 
   @spec start_client(module(), atom() | pid(), String.t, Keyword.t) :: {:ok, pid} | :error
-  def start_client(client_module, bot_server, chat_id, opts \\ []) do
+  def start_client(client_module, bot_server, chat_id, opts \\ []) when is_binary(chat_id) do
     spec = Supervisor.Spec.worker(client_module, [chat_id, opts])
     case DynamicSupervisor.start_child(__MODULE__, spec) do
       {:ok, pid} ->
@@ -36,7 +36,7 @@ defmodule Botlead.Client.Supervisor do
   end
 
   @spec remove_client(atom() | pid(), atom() | pid(), String.t) :: :ok | :error
-  def remove_client(bot_server, pid, chat_id) when is_pid(pid) do
+  def remove_client(bot_server, pid, chat_id) when is_pid(pid) and is_binary(chat_id) do
     case DynamicSupervisor.terminate_child(__MODULE__, pid) do
       :ok ->
         Process.send(bot_server, {:detach_client, chat_id}, [])
@@ -46,7 +46,7 @@ defmodule Botlead.Client.Supervisor do
         :error
     end
   end
-  def remove_client(bot_server, instance, chat_id) do
+  def remove_client(bot_server, instance, chat_id) when is_binary(chat_id) do
     case Process.whereis(instance) do
       pid when is_pid(pid) ->
         remove_client(bot_server, pid, chat_id)
