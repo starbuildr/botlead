@@ -4,14 +4,14 @@ defmodule Botlead.MixProject do
   def project do
     [
       app: :botlead,
-      version: "0.1.12",
-      elixir: "~> 1.6",
+      version: "0.2.0",
+      elixir: "~> 1.9",
       description: "Elixir framework for writing and configuring chat bots",
       docs: [extras: ["README.md"]],
       start_permanent: Mix.env() == :prod,
-      build_embedded: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
       package: package(),
-      elixirc_paths: elixirc_paths(Mix.env),
+      elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps()
     ]
   end
@@ -22,7 +22,7 @@ defmodule Botlead.MixProject do
       files: ["lib", "mix.exs"],
       maintainers: ["Vyacheslav Voronchuk"],
       licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/starbuildr/botlead"},
+      links: %{"Github" => "https://github.com/starbuildr/botlead"}
     ]
   end
 

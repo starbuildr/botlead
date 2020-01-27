@@ -3,30 +3,30 @@ defmodule Botlead.TestRouter do
   alias Botlead.Controller.TestController
 
   pipeline :authed do
-    plug Botlead.Plug.TestPlug
+    plug(Botlead.Plug.TestPlug)
   end
 
   scope :default, "/" do
-    pipe_through [:authed]
+    pipe_through([:authed])
 
-    match "/", TestController, :test1
-    match "/test1", TestController, :test1
-    match "/test2", TestController, :test2
+    match("/", TestController, :test1)
+    match("/test1", TestController, :test1)
+    match("/test2", TestController, :test2)
   end
 
   scope :test_scope, "/stest" do
-    pipe_through [:authed]
+    pipe_through([:authed])
 
-    match "/", TestController, :test3
+    match("/", TestController, :test3)
   end
 
   scope :test_complex_scope, "/stest/complex" do
-    pipe_through [:authed]
+    pipe_through([:authed])
 
-    match "/", TestController, :test2
+    match("/", TestController, :test2)
   end
 
-  match "*", TestController, :not_found
+  match("*", TestController, :not_found)
 
   @impl true
   def match_message(router_module, message, path, scope, assigns, opts) do
@@ -37,6 +37,7 @@ defmodule Botlead.TestRouter do
         assigns: assigns,
         scope: scope
       })
+
     router_module.do_match(conn, opts)
   end
 

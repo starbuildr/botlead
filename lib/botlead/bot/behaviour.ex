@@ -16,10 +16,10 @@ defmodule Botlead.Bot.Behaviour do
   @doc """
   Check if user was registered for the related chat_id.
   """
-  @callback is_registered?(String.t) :: boolean()
+  @callback is_registered?(String.t()) :: boolean()
 
   @doc """
   Callback for handling messages from unknown clients.
   """
-  @callback process_message_from_the_new_user(String.t, map()) :: {:ok, any()} | {:error, any()}
+  @callback process_message_from_the_new_user(String.t(), map()) :: {:ok, any()} | {:error, any()}
 end

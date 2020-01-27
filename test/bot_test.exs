@@ -23,9 +23,11 @@ defmodule Botlead.BotTest do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
       text = message.message.chat.text
+
       msg = %Botlead.Message{
         content: text
       }
+
       {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       Botlead.TestBot.send_message(chat_id, msg)
       assert_receive {:message_delivered, :sent, :ok}
@@ -60,11 +62,12 @@ defmodule Botlead.BotTest do
 
     test "registers clients automatically" do
       messages = build_list(5, :telegram_message)
-      chat_ids = Enum.map messages, & &1.message.chat.id
+      chat_ids = Enum.map(messages, & &1.message.chat.id)
       Process.send(Botlead.TestBot, {:process_updates, messages}, [])
-      Enum.each chat_ids, fn(chat_id) ->
+
+      Enum.each(chat_ids, fn chat_id ->
         assert_receive {:attached_client, ^chat_id, _pid}
-      end
+      end)
     end
 
     test "client can be restarted, new process will be spawned" do

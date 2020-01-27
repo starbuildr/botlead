@@ -10,21 +10,23 @@ defmodule Botlead.Supervisor do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @spec init([]) :: {:ok, tuple()}
   def init([]) do
     config = Application.get_env(:botlead, __MODULE__) |> Keyword.fetch!(:bots)
+
     children =
-      Enum.reduce config, [], fn(child_config, children) ->
+      Enum.reduce(config, [], fn child_config, children ->
         case child_config do
           bot_module when is_atom(bot_module) ->
             opts = [bot_module: bot_module, client_module: bot_module.client_module()]
             client_supervisor = supervisor(Botlead.Client.Supervisor, [opts])
             bot_worker = worker(bot_module, [opts])
             [client_supervisor | [bot_worker | children]]
+
           _ ->
             children
         end
-      end
+      end)
+
     supervise(children, strategy: :one_for_one)
   end
 end

@@ -9,53 +9,58 @@ defmodule Botlead.Bot.Server do
   Relay message to client
   """
   def relay_msg_to_client(
-    chat_id,
-    message,
-    clients,
-    client_module,
-    bot_server,
-    is_registered?,
-    process_message_from_the_new_user
-  ) when is_binary(chat_id) do
+        chat_id,
+        message,
+        clients,
+        client_module,
+        bot_server,
+        is_registered?,
+        process_message_from_the_new_user
+      )
+      when is_binary(chat_id) do
     case Map.get(clients, chat_id) do
       pid when is_pid(pid) ->
         client_module.parse_message(pid, message)
         :ok
+
       _ ->
-        with \
-          true <- is_registered?.(chat_id),
-          {false, _} <- {client_module.is_client_started?(chat_id), chat_id},
-          {:ok, pid} <- client_module.connect(bot_server, chat_id)
-        do
+        with true <- is_registered?.(chat_id),
+             {false, _} <- {client_module.is_client_started?(chat_id), chat_id},
+             {:ok, pid} <- client_module.connect(bot_server, chat_id) do
           Process.send(bot_server, {:attach_client, chat_id, pid}, [])
           client_module.parse_message(pid, message)
         else
           false ->
-            with \
-              {:ok, _} <- process_message_from_the_new_user.(chat_id, message),
-              {:ok, pid} <- client_module.connect(bot_server, chat_id)
-            do
+            with {:ok, _} <- process_message_from_the_new_user.(chat_id, message),
+                 {:ok, pid} <- client_module.connect(bot_server, chat_id) do
               if is_pid(bot_server) or Process.whereis(bot_server) do
                 Process.send(bot_server, {:attach_client, chat_id, pid}, [])
               else
                 if System.get_env("MIX_ENV") !== "test" do
-                  Logger.error fn -> "Bot server is dead and can't attach client" end
+                  Logger.error(fn -> "Bot server is dead and can't attach client" end)
                 end
               end
+
               client_module.parse_message(pid, message)
             else
               {:error, changeset} ->
-                Logger.error fn -> "Unable to register the new client: #{inspect(changeset)}" end
+                Logger.error(fn -> "Unable to register the new client: #{inspect(changeset)}" end)
+
               error ->
-                Logger.error fn -> "Unable to connect the new client: #{inspect(error)}" end
+                Logger.error(fn -> "Unable to connect the new client: #{inspect(error)}" end)
             end
+
           {true, chat_id} ->
             pid = client_module.get_client_pid(chat_id)
             Process.send(bot_server, {:attach_client, chat_id, pid}, [])
             client_module.parse_message(pid, message)
+
           _ ->
-            Logger.error fn -> "Unable to start client #{inspect(chat_id)} and relay: #{inspect(message)}" end
+            Logger.error(fn ->
+              "Unable to start client #{inspect(chat_id)} and relay: #{inspect(message)}"
+            end)
         end
+
         :ok
     end
   end
@@ -72,7 +77,7 @@ defmodule Botlead.Bot.Server do
       @behaviour Botlead.Bot.Behaviour
 
       @doc false
-      @spec start_link(Keyword.t) :: {:ok, pid}
+      @spec start_link(Keyword.t()) :: {:ok, pid}
       def start_link(opts) do
         GenServer.start_link(__MODULE__, opts, name: __MODULE__)
       end
@@ -80,24 +85,31 @@ defmodule Botlead.Bot.Server do
       @doc """
       Initialise state of bot server according to adapter config.
       """
-      @spec init(Keyword.t) :: {:ok, map()}
+      @spec init(Keyword.t()) :: {:ok, map()}
       def init(_opts) do
-        state =
-          %{
-            processed_messages: [],
-            last_update: 0,
-            clients: %{},
-            listener: nil
-          }
+        state = %{
+          processed_messages: [],
+          last_update: 0,
+          clients: %{},
+          listener: nil
+        }
 
         case adapter_module().init() do
           :ok ->
             execute_callback(state, {:before_start})
             {:ok, state}
+
           {:poll, poll_delay, poll_limit} ->
-            Logger.info fn -> "Starting polling of Telegram bot updates..." end
+            Logger.info(fn -> "Starting polling of Telegram bot updates..." end)
             timer = Process.send_after(__MODULE__, {:get_updates}, poll_delay)
-            state = Map.merge(state, %{poll_timer: timer, poll_delay: poll_delay, poll_limit: poll_limit})
+
+            state =
+              Map.merge(state, %{
+                poll_timer: timer,
+                poll_delay: poll_delay,
+                poll_limit: poll_limit
+              })
+
             execute_callback(state, {:before_start})
             {:ok, state}
         end
@@ -115,7 +127,10 @@ defmodule Botlead.Bot.Server do
       @doc """
       Edit previously posted message.
       """
-      def handle_cast({:edit_message, chat_id, message_id, text, opts}, %{clients: clients} = state) do
+      def handle_cast(
+            {:edit_message, chat_id, message_id, text, opts},
+            %{clients: clients} = state
+          ) do
         client_pid = Map.get(clients, chat_id)
         adapter_module().edit_message(chat_id, message_id, text, client_pid, opts)
         {:noreply, state}
@@ -133,18 +148,22 @@ defmodule Botlead.Bot.Server do
       @doc """
       Fetch updates from bot log.
       """
-      def handle_info({:get_updates}, %{
-        poll_timer: timer,
-        poll_limit: poll_limit,
-        poll_delay: poll_delay,
-        last_update: last_update
-      } = state) do
-        if (Process.read_timer(timer) == false) do
+      def handle_info(
+            {:get_updates},
+            %{
+              poll_timer: timer,
+              poll_limit: poll_limit,
+              poll_delay: poll_delay,
+              last_update: last_update
+            } = state
+          ) do
+        if Process.read_timer(timer) == false do
           new_state =
             case adapter_module().get_updates(last_update, poll_limit) do
               {:ok, messages} ->
                 Process.send(self(), {:process_updates, messages}, [])
                 state
+
               :error ->
                 state
             end
@@ -176,6 +195,7 @@ defmodule Botlead.Bot.Server do
             &process_message_from_the_new_user/2
           )
         end
+
         {:noreply, state}
       end
 
@@ -183,20 +203,27 @@ defmodule Botlead.Bot.Server do
       Handle updates from bot
       """
       def handle_info({:process_updates, messages}, %{processed_messages: old_messages} = state) do
-        {:ok, new_updates, last_update, cmds} = adapter_module().process_messages(messages, old_messages)
+        {:ok, new_updates, last_update, cmds} =
+          adapter_module().process_messages(messages, old_messages)
+
         if length(new_updates) > 0 and last_update != nil do
-          Enum.each cmds, fn(cmd) ->
+          Enum.each(cmds, fn cmd ->
             case cmd do
               {:relay_msg_to_client, _chat_id, _message} = cmd ->
                 Process.send(self(), cmd, [])
+
               {:restart_client, _chat_id, _opts} = cmd ->
                 Process.send(self(), cmd, [])
+
               _ ->
                 :ok
             end
-          end
+          end)
+
           execute_callback(state, {:processed_updates, new_updates})
-          {:noreply, %{state | processed_messages: old_messages ++ new_updates, last_update: last_update}}
+
+          {:noreply,
+           %{state | processed_messages: old_messages ++ new_updates, last_update: last_update}}
         else
           execute_callback(state, {:processed_updates, new_updates})
           {:noreply, state}
@@ -217,7 +244,7 @@ defmodule Botlead.Bot.Server do
       Attach client to bot
       """
       def handle_info({:attach_client, chat_id, pid}, %{clients: clients} = state)
-      when is_pid(pid) and is_binary(chat_id) do
+          when is_pid(pid) and is_binary(chat_id) do
         execute_callback(state, {:attached_client, chat_id, pid})
         {:noreply, %{state | clients: Map.put(clients, chat_id, pid)}}
       end
@@ -231,7 +258,8 @@ defmodule Botlead.Bot.Server do
       @doc """
       Detach client from bot
       """
-      def handle_info({:detach_client, chat_id}, %{clients: clients} = state) when is_binary(chat_id) do
+      def handle_info({:detach_client, chat_id}, %{clients: clients} = state)
+          when is_binary(chat_id) do
         execute_callback(state, {:detached_client, chat_id})
         {:noreply, %{state | clients: Map.drop(clients, [chat_id])}}
       end
@@ -239,7 +267,7 @@ defmodule Botlead.Bot.Server do
       @doc """
       Restart client process by chat_id.
       """
-      @spec restart_client(String.t, Keyword.t) :: :ok
+      @spec restart_client(String.t(), Keyword.t()) :: :ok
       def restart_client(chat_id, opts \\ []) when is_binary(chat_id) do
         Process.send(__MODULE__, {:restart_client, chat_id, opts}, [])
       end
@@ -247,12 +275,14 @@ defmodule Botlead.Bot.Server do
       @doc """
       Send the new message by Bot.
       """
-      @spec send_message(String.t, %Message{}) :: :ok
-      def send_message(telegram_chat_id, %Message{content: text} = message) when is_binary(telegram_chat_id) do
+      @spec send_message(String.t(), %Message{}) :: :ok
+      def send_message(telegram_chat_id, %Message{content: text} = message)
+          when is_binary(telegram_chat_id) do
         opts = adapter_module().msg_to_opts(message)
         send_message(telegram_chat_id, text, opts)
       end
-      @spec send_message(String.t, String.t, Keyword.t) :: :ok
+
+      @spec send_message(String.t(), String.t(), Keyword.t()) :: :ok
       def send_message(telegram_chat_id, text, opts \\ []) when is_binary(telegram_chat_id) do
         message = {:send_message, telegram_chat_id, text, opts}
         GenServer.cast(__MODULE__, message)
@@ -261,8 +291,9 @@ defmodule Botlead.Bot.Server do
       @doc """
       Edit existing message by Bot.
       """
-      @spec edit_message(String.t, String.t, String.t, Keyword.t) :: :ok
-      def edit_message(telegram_chat_id, message_id, text, opts \\ []) when is_binary(telegram_chat_id) do
+      @spec edit_message(String.t(), String.t(), String.t(), Keyword.t()) :: :ok
+      def edit_message(telegram_chat_id, message_id, text, opts \\ [])
+          when is_binary(telegram_chat_id) do
         message = {:edit_message, telegram_chat_id, message_id, text, opts}
         GenServer.cast(__MODULE__, message)
       end
@@ -270,8 +301,9 @@ defmodule Botlead.Bot.Server do
       @doc """
       Delete existing message by Bot.
       """
-      @spec delete_message(String.t, String.t, Keyword.t) :: :ok
-      def delete_message(telegram_chat_id, message_id, opts \\ []) when is_binary(telegram_chat_id) do
+      @spec delete_message(String.t(), String.t(), Keyword.t()) :: :ok
+      def delete_message(telegram_chat_id, message_id, opts \\ [])
+          when is_binary(telegram_chat_id) do
         message = {:delete_message, telegram_chat_id, message_id, opts}
         GenServer.cast(__MODULE__, message)
       end

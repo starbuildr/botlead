@@ -21,6 +21,7 @@ defmodule Botlead.TestBot do
     Process.send(listener_pid, msg, [])
     :ok
   end
+
   def callback(_, _), do: :ok
 
   @doc """
@@ -33,7 +34,8 @@ defmodule Botlead.TestBot do
   @doc """
   Get all bot clients.
   """
-  def handle_info({:get_clients, callback_pid}, %{clients: clients} = state) when is_pid(callback_pid) do
+  def handle_info({:get_clients, callback_pid}, %{clients: clients} = state)
+      when is_pid(callback_pid) do
     Process.send(callback_pid, {:get_clients, clients}, [])
     {:noreply, state}
   end

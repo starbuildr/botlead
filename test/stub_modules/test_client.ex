@@ -9,15 +9,16 @@ defmodule Botlead.TestClient do
 
   @impl true
   def get_initial_state(chat_id, opts) do
-    state = %{
+    user = get_user_by_chat_id(chat_id)
+
+    %{
       chat_id: chat_id,
-      user: get_user_by_chat_id(chat_id),
+      user: user,
       listener: Keyword.get(opts, :listener),
       conn: nil,
       path: nil,
       scope: nil
     }
-    {:ok, state}
   end
 
   @impl true
@@ -25,8 +26,9 @@ defmodule Botlead.TestClient do
     case router().match_message(message, state.path, state.scope, opts) do
       %{code: 200} = conn ->
         conn
+
       conn ->
-        Logger.warn fn -> "Client ingores message #{inspect(message)}}" end
+        Logger.warn(fn -> "Client ingores message #{inspect(message)}}" end)
         conn
     end
   end
@@ -36,7 +38,7 @@ defmodule Botlead.TestClient do
     state
   end
 
-  def get_user_by_chat_id(chat_id) do
+  def get_user_by_chat_id(chat_id) when is_binary(chat_id) do
     %{"telegram_chat_id" => chat_id}
   end
 
@@ -47,5 +49,6 @@ defmodule Botlead.TestClient do
     Process.send(listener_pid, msg, [])
     :ok
   end
+
   def callback(_, _), do: :ok
 end

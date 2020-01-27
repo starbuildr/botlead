@@ -23,7 +23,7 @@ Add `botlead` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:botlead, "~> 0.1"}
+    {:botlead, "~> 0.2"}
   ]
 end
 ```
