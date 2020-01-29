@@ -169,13 +169,13 @@ defmodule Botlead.Bot.Adapter.Telegram do
          message: %{chat: %{id: chat_id}, text: "/restart"},
          update_id: update_id
        }) do
-    {update_id, {:restart_client, chat_id, []}}
+    {update_id, {:restart_client, "#{chat_id}", []}}
   end
 
   defp parse_message(
          %Nadia.Model.Update{message: %{chat: %{id: chat_id}}, update_id: update_id} = message
        ) do
-    {update_id, {:relay_msg_to_client, chat_id, message}}
+    {update_id, {:relay_msg_to_client, "#{chat_id}", message}}
   end
 
   defp parse_message(
@@ -184,7 +184,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
            update_id: update_id
          } = message
        ) do
-    {update_id, {:relay_msg_to_client, chat_id, message}}
+    {update_id, {:relay_msg_to_client, "#{chat_id}", message}}
   end
 
   defp parse_message(%{update_id: update_id} = message) when is_integer(update_id) do

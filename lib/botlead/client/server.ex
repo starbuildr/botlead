@@ -19,6 +19,7 @@ defmodule Botlead.Client.Server do
         GenServer.start_link(__MODULE__, %{chat_id: chat_id, opts: opts}, name: instance(chat_id))
       end
 
+      @impl true
       @spec init(map()) :: {:ok, map()}
       def init(%{chat_id: chat_id, opts: opts}) do
         server = instance(chat_id)
@@ -33,6 +34,7 @@ defmodule Botlead.Client.Server do
         {:ok, new_state}
       end
 
+      @impl true
       @spec terminate(any(), map()) :: :ok
       def terminate(reason, %{chat_id: chat_id, __opts__: opts} = state) do
         Logger.info(fn -> "Terminated clinet #{chat_id}, #{inspect(reason)}" end)
@@ -45,6 +47,7 @@ defmodule Botlead.Client.Server do
       @doc """
       Recieved message from bot.
       """
+      @impl true
       def handle_cast({:parse_message, message, opts}, state) do
         conn = message_to_conn(message, state, opts)
         new_state = %{state | conn: conn, scope: conn.scope, path: conn.path}
@@ -64,6 +67,7 @@ defmodule Botlead.Client.Server do
       @doc """
       Get call Conn object from session.
       """
+      @impl true
       def handle_call({:get_last_conn}, _from, %{conn: conn} = state) do
         {:reply, conn, state}
       end
