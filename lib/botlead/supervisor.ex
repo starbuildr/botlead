@@ -5,11 +5,7 @@ defmodule Botlead.Supervisor do
 
   use Supervisor
 
-  @spec start_link() :: {:ok, pid}
-  def start_link do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
-  end
-
+  @spec init([]) :: :ignore | {:error, any()} | {:ok, pid()}
   def init([]) do
     config = Application.get_env(:botlead, __MODULE__) |> Keyword.fetch!(:bots)
 
@@ -18,8 +14,8 @@ defmodule Botlead.Supervisor do
         case child_config do
           bot_module when is_atom(bot_module) ->
             opts = [bot_module: bot_module, client_module: bot_module.client_module()]
-            client_supervisor = supervisor(Botlead.Client.Supervisor, [opts])
-            bot_worker = worker(bot_module, [opts])
+            client_supervisor = {Botlead.Client.Supervisor, opts}
+            bot_worker = {bot_module, opts}
             [client_supervisor | [bot_worker | children]]
 
           _ ->
@@ -27,6 +23,7 @@ defmodule Botlead.Supervisor do
         end
       end)
 
-    supervise(children, strategy: :one_for_one)
+    opts = [strategy: :one_for_one, name: __MODULE__]
+    Supervisor.start_link(children, opts) |> IO.inspect()
   end
 end

@@ -28,6 +28,7 @@ defmodule Botlead.MixProject do
 
   def application do
     [
+      mod: {Botlead, []},
       extra_applications: [:logger]
     ]
   end

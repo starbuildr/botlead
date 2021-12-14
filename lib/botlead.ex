@@ -5,5 +5,5 @@ defmodule Botlead do
 
   use Application
 
-  def start(_type, _args), do: Botlead.Supervisor.start_link()
+  def start(_type, _args), do: Botlead.Supervisor.init([])
 end

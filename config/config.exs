@@ -36,3 +36,6 @@ config :botlead, Botlead.Bot.Adapter.Telegram,
   poll_delay: 600,
   poll_limit: 100,
   sendbox_message_send: true
+
+config :botlead, Botlead.Supervisor,
+  bots: [Botlead.TestBot]
