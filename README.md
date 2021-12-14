@@ -30,8 +30,6 @@ end
 
 ## Configuration
 
-Add `supervisor(Botlead.Supervisor, [])` to supervisor tree.
-
 Add your bot into `:botlead` configuration:
 
 ```
