@@ -23,6 +23,6 @@ defmodule Botlead.Supervisor do
       end)
 
     opts = [strategy: :one_for_one, name: __MODULE__]
-    Supervisor.start_link(children, opts) |> IO.inspect()
+    Supervisor.start_link(children, opts)
   end
 end
