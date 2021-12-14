@@ -5,8 +5,7 @@ defmodule Botlead.Supervisor do
 
   use Supervisor
 
-  @spec init([]) :: :ignore | {:error, any()} | {:ok, pid()}
-  def init([]) do
+  def init(_) do
     config = Application.get_env(:botlead, __MODULE__) |> Keyword.fetch!(:bots)
 
     children =
