@@ -4,10 +4,10 @@ defmodule Botlead.MixProject do
   def project do
     [
       app: :botlead,
-      version: "0.2.2",
+      version: "0.2.3",
       elixir: "~> 1.9",
       description: "Elixir framework for writing and configuring chat bots",
-      docs: [main: "Botlead", extras: ["README.md"]],
+      docs: [extras: ["README.md"]],
       start_permanent: Mix.env() == :prod,
       build_embedded: Mix.env() == :prod,
       package: package(),
