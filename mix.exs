@@ -4,7 +4,7 @@ defmodule Botlead.MixProject do
   def project do
     [
       app: :botlead,
-      version: "0.2.3",
+      version: "0.2.4",
       elixir: "~> 1.9",
       description: "Elixir framework for writing and configuring chat bots",
       docs: [extras: ["README.md"]],
@@ -37,11 +37,11 @@ defmodule Botlead.MixProject do
   defp deps do
     [
       {:gen_router, "~> 0.1"},
-      {:nadia, "~> 0.4.2"},
+      {:nadia, "~> 0.7"},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, "~> 0.24", only: :dev, runtime: false},
-      {:ex_machina, "~> 2.2", only: :test},
-      {:exvcr, "~> 0.10", only: :test}
+      {:ex_machina, "~> 2.7", only: :test},
+      {:exvcr, "~> 0.13", only: :test}
     ]
   end
 
