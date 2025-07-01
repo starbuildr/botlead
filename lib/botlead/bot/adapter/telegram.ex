@@ -3,6 +3,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
   Implementation business logic for Bot server for Telegram platform.
   """
 
+  use Telegex.Hook.GenHandler
   require Logger
 
   @type cmd :: {:relay_msg_to_client, String.t(), map()} | {:restart_client, String.t()}
@@ -10,15 +11,33 @@ defmodule Botlead.Bot.Adapter.Telegram do
 
   @retry_delay 500
 
-  @doc """
-  Start Telegram process either by webhook or with periodical config.
-  """
-  @spec init() :: :ok | {:poll, integer(), integer()}
+  @impl true
+  def on_boot do
+    if config(:use_webhook, false) do
+      {_bot_name, webhook, port} = config!(:use_webhook) |> List.first()
+      Logger.info(fn -> "Setting Telegram postback webhook to: #{webhook}" end)
+
+      {:ok, true} = Telegex.delete_webhook()
+      {:ok, true} = Telegex.set_webhook(url: webhook)
+      %Telegex.Hook.Config{server_port: port}
+    else
+      {:ok, true} = Telegex.delete_webhook()
+      poll_delay = config!(:poll_delay)
+      poll_limit = config!(:poll_limit)
+      %Telegex.Polling.Config{limit: poll_limit, interval: poll_delay}
+    end
+  end
+
+  @impl true
+  def on_update(update) do
+    {bot_name, _webhook, _port} = config!(:use_webhook) |> List.first()
+    Process.send(bot_name, {:process_updates, update}, [])
+    :ok
+  end
+
+  @doc false
   def init do
     if config(:use_webhook, false) do
-      webhook = config!(:use_webhook)
-      Logger.info(fn -> "Setting Telegram postback webhook to: #{webhook}" end)
-      Nadia.set_webhook(url: webhook)
       :ok
     else
       poll_delay = config!(:poll_delay)
@@ -33,20 +52,20 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @spec send_message(String.t() | integer(), String.t(), pid() | nil, Keyword.t()) :: :ok
   def send_message(chat_id, text, client_pid, opts) do
     with false <- config(:sendbox_message_send, false),
-         {:ok, result} <- Nadia.send_message(chat_id, text, opts) do
+         {:ok, result} <- Telegex.send_message(chat_id, text, opts) do
       maybe_notify_msg_result(client_pid, {:sent, result})
     else
       true ->
         Logger.info(fn -> "No chat messages sent in a sandbox mode!" end)
         maybe_notify_msg_result(client_pid, {:sent, :ok})
 
-      {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
-        Logger.warn(fn -> "Telegram bot message retry send_message!" end)
+      {:error, %Telegex.Error{description: "Please wait a little"}} ->
+        Logger.warning(fn -> "Telegram bot message retry send_message!" end)
         :timer.sleep(@retry_delay)
         send_message(chat_id, text, client_pid, opts)
 
       response ->
-        Logger.warn(fn -> "Unexpected response from Nadia client #{inspect(response)}" end)
+        Logger.warning(fn -> "Unexpected response from Telegex client #{inspect(response)}" end)
         :ok
     end
   end
@@ -57,12 +76,12 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @spec edit_message(String.t(), String.t(), String.t(), pid() | nil, Keyword.t()) :: :ok
   def edit_message(chat_id, message_id, text, client_pid, opts) do
     unless config(:sendbox_message_send, false) do
-      case Nadia.edit_message_text(chat_id, message_id, nil, text, opts) do
+      case Telegex.edit_message_text(text, [chat_id: chat_id, message_id: message_id] ++ opts) do
         {:ok, result} ->
           maybe_notify_msg_result(client_pid, {:edited, result})
 
-        {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
-          Logger.warn(fn -> "Telegram bot message retry edit_message!" end)
+        {:error, %Telegex.Error{description: "Please wait a little"}} ->
+          Logger.warning(fn -> "Telegram bot message retry edit_message!" end)
           :timer.sleep(@retry_delay)
           edit_message(chat_id, message_id, text, client_pid, opts)
       end
@@ -78,12 +97,12 @@ defmodule Botlead.Bot.Adapter.Telegram do
   @spec delete_message(String.t(), String.t(), pid() | nil, Keyword.t()) :: :ok
   def delete_message(chat_id, message_id, client_pid, opts) do
     unless config(:sendbox_message_send, false) do
-      case Nadia.API.request("deleteMessage", chat_id: chat_id, message_id: message_id) do
+      case Telegex.delete_message(chat_id, message_id) do
         :ok ->
           maybe_notify_msg_result(client_pid, {:deleted, message_id})
 
-        {:error, %Nadia.Model.Error{reason: "Please wait a little"}} ->
-          Logger.warn(fn -> "Telegram bot message retry delete_message!" end)
+        {:error, %Telegex.Error{description: "Please wait a little"}} ->
+          Logger.warning(fn -> "Telegram bot message retry delete_message!" end)
           :timer.sleep(@retry_delay)
           delete_message(chat_id, message_id, client_pid, opts)
       end
@@ -101,12 +120,12 @@ defmodule Botlead.Bot.Adapter.Telegram do
     opts = [limit: poll_limit]
     opts = if last_update > 0, do: Keyword.put(opts, :offset, last_update), else: opts
 
-    case Nadia.get_updates(opts) do
+    case Telegex.get_updates(opts) do
       {:ok, messages} ->
         {:ok, messages}
 
       issues ->
-        Logger.warn(fn -> "Telegram polling issues #{inspect(issues)}" end)
+        Logger.warning(fn -> "Telegram polling issues #{inspect(issues)}" end)
         :error
     end
   end
@@ -127,7 +146,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
   end
 
   @doc """
-  Create Nadia client option specification for message response.
+  Create Telegex client option specification for message response.
   """
   @spec msg_to_opts(%Botlead.Message{}, Keyword.t()) :: Keyword.t()
   def msg_to_opts(%Botlead.Message{} = msg, msg_opts \\ []) do
@@ -165,7 +184,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
 
   # Start Telegram client if needed
   @spec parse_message(map()) :: {integer(), parsed_message}
-  defp parse_message(%Nadia.Model.Update{
+  defp parse_message(%Telegex.Type.Update{
          message: %{chat: %{id: chat_id}, text: "/restart"},
          update_id: update_id
        }) do
@@ -173,13 +192,13 @@ defmodule Botlead.Bot.Adapter.Telegram do
   end
 
   defp parse_message(
-         %Nadia.Model.Update{message: %{chat: %{id: chat_id}}, update_id: update_id} = message
+         %Telegex.Type.Update{message: %{chat: %{id: chat_id}}, update_id: update_id} = message
        ) do
     {update_id, {:relay_msg_to_client, "#{chat_id}", message}}
   end
 
   defp parse_message(
-         %Nadia.Model.Update{
+         %Telegex.Type.Update{
            callback_query: %{message: %{chat: %{id: chat_id}}},
            update_id: update_id
          } = message
@@ -193,7 +212,7 @@ defmodule Botlead.Bot.Adapter.Telegram do
   end
 
   defp parse_message(message) do
-    Logger.warn(fn -> "Invalid message: #{inspect(message)}" end)
+    Logger.warning(fn -> "Invalid message: #{inspect(message)}" end)
     {0, :invalid_message}
   end
 

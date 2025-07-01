@@ -13,7 +13,7 @@ defmodule Botlead.BotTest do
     test "send message" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      text = message.message.chat.text
+      text = message.message.text
       {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       Botlead.TestBot.send_message(chat_id, text)
       assert_receive {:message_delivered, :sent, :ok}
@@ -22,7 +22,7 @@ defmodule Botlead.BotTest do
     test "send message as structure" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      text = message.message.chat.text
+      text = message.message.text
 
       msg = %Botlead.Message{
         content: text
@@ -36,7 +36,7 @@ defmodule Botlead.BotTest do
     test "edit message" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      text = message.message.chat.text
+      text = message.message.text
       update_id = message.update_id
       {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       Botlead.TestBot.edit_message(chat_id, message.update_id, text)
@@ -46,10 +46,9 @@ defmodule Botlead.BotTest do
     test "delete message" do
       message = build(:telegram_message)
       chat_id = message.message.chat.id
-      text = message.message.chat.text
       update_id = message.update_id
       {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
-      Botlead.TestBot.delete_message(chat_id, update_id, text)
+      Botlead.TestBot.delete_message(chat_id, update_id)
       assert_receive {:message_delivered, :deleted, ^update_id}
     end
   end

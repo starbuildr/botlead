@@ -28,7 +28,7 @@ defmodule Botlead.TestClient do
         conn
 
       conn ->
-        Logger.warn(fn -> "Client ingores message #{inspect(message)}}" end)
+        Logger.warning(fn -> "Client ignores message #{inspect(message)}}" end)
         conn
     end
   end

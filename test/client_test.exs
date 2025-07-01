@@ -16,7 +16,7 @@ defmodule Botlead.ClientTest do
       {:ok, _pid} = Botlead.TestClient.connect(Botlead.TestBot, chat_id, listener: self())
       Process.send(Botlead.TestBot, {:process_updates, [message]}, [])
       assert_receive {:parsed_message, %GenRouter.Conn{} = conn}
-      assert conn.params.message === message
+      assert conn.params.message === message.message
     end
 
     test "automatically starts new process on a new message if needed" do
@@ -27,7 +27,7 @@ defmodule Botlead.ClientTest do
       assert_receive {:attached_client, ^chat_id, pid}
       assert Botlead.TestClient.is_client_started?(chat_id)
       conn = GenServer.call(pid, {:get_last_conn})
-      assert conn.params.message === message
+      assert conn.params.message === message.message
     end
   end
 end

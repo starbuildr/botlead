@@ -59,13 +59,21 @@ config :botlead, Botlead.Bot.Adapter.Telegram,
   use_webhook: "https://mysite.com/TELEGRAM_SECURE_URL"
 ```
 
-### Nadia
+### Telegex
 
-We use Nadia as adapter library for communication with Telegram platform. 
+We use Telegex as adapter library for communication with Telegram platform. 
 
 ```
-config :nadia,
+config :telegex,
   token: {:system, "TELEGRAM_BOT_TOKEN"}
+  hook_adapter: Bandit // or Cowboy, needed for webhook mode
+```
+
+Also add server port for webhook webserver and bot name for sending updates:
+
+```
+config :botlead, Botlead.Bot.Adapter.Telegram,
+  webhook: {MyApp.Bot, URL, 4000}
 ```
 
 ### GenRouter
@@ -237,7 +245,7 @@ defmodule App.Client do
       %{code: 200} = conn ->
         conn
       conn ->
-        Logger.warn fn -> "Client ingores message #{inspect(message)}}" end
+        Logger.warning fn -> "Client ingores message #{inspect(message)}}" end
         conn
     end
   end

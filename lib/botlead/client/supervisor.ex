@@ -36,7 +36,7 @@ defmodule Botlead.Client.Supervisor do
         {:ok, pid}
 
       {:error, {:already_started, pid}} ->
-        Logger.warn(fn -> "Client process #{chat_id} was already started" end)
+        Logger.warning(fn -> "Client process #{chat_id} was already started" end)
         {:ok, pid}
 
       error ->
